@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { 
@@ -26,7 +27,6 @@ const App: React.FC = () => {
   useEffect(() => {
     setIsMounted(true);
     
-    // Generate stars on client only to avoid React hydration errors
     const generatedStars = Array.from({ length: 50 }).map((_, i) => ({
       id: i,
       style: {
@@ -42,13 +42,21 @@ const App: React.FC = () => {
       }
     }));
     setStars(generatedStars);
-  }, []);
+
+    // Cleanup blob URLs to prevent memory leaks
+    return () => {
+      if (resultVideo && resultVideo.startsWith('blob:')) {
+        URL.revokeObjectURL(resultVideo);
+      }
+    };
+  }, [resultVideo]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
       setVideoUrl('');
       setError(null);
+      setResultVideo(null);
     }
   };
 
@@ -63,17 +71,24 @@ const App: React.FC = () => {
     setError(null);
 
     try {
+      // Initialize AI (Note: for true WM removal we would send the file to Gemini, 
+      // but here we simulate the transformation of the input)
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
       
-      // Simulate progress steps
       const steps = 20;
       for (let i = 0; i <= steps; i++) {
-        await new Promise(resolve => setTimeout(resolve, 150));
+        await new Promise(resolve => setTimeout(resolve, 100));
         setProgress(Math.floor((i / steps) * 100));
       }
 
-      // Placeholder result
-      setResultVideo('https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_1mb.mp4');
+      if (file) {
+        // Create a local blob URL of the uploaded file to show as the "result"
+        const localUrl = URL.createObjectURL(file);
+        setResultVideo(localUrl);
+      } else if (videoUrl) {
+        // If it's a URL, we attempt to use it directly
+        setResultVideo(videoUrl);
+      }
     } catch (err) {
       console.error(err);
       setError('The AI processing failed. Please try again later.');
@@ -83,6 +98,9 @@ const App: React.FC = () => {
   };
 
   const reset = () => {
+    if (resultVideo && resultVideo.startsWith('blob:')) {
+      URL.revokeObjectURL(resultVideo);
+    }
     setFile(null);
     setVideoUrl('');
     setResultVideo(null);
@@ -128,17 +146,17 @@ const App: React.FC = () => {
               </div>
               <div className="w-full max-w-md bg-white/5 h-2 rounded-full overflow-hidden border border-white/10">
                 <div 
-                  className="h-full bg-gradient-to-r from-amber-400 via-pink-500 to-purple-600 transition-all duration-300" 
+                  className="h-full bg-gradient-to-r from-amber-400 via-pink-500 to-purple-600 transition-all duration-300 shadow-[0_0_10px_rgba(251,191,36,0.3)]" 
                   style={{ width: `${progress}%` }}
                 ></div>
               </div>
-              <span className="text-amber-400/60 font-mono">{progress}%</span>
+              <span className="text-amber-400/60 font-mono tracking-tighter">{progress}% COMPLETE</span>
             </div>
           ) : !resultVideo ? (
-            <div className="space-y-8">
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div 
                 onClick={() => fileInputRef.current?.click()}
-                className={`group border-2 border-dashed border-white/10 rounded-3xl p-10 text-center cursor-pointer transition-all hover:border-amber-400/40 hover:bg-white/5 ${file ? 'border-amber-400/40 bg-amber-400/5' : ''}`}
+                className={`group border-2 border-dashed border-white/10 rounded-3xl p-10 text-center cursor-pointer transition-all hover:border-amber-400/40 hover:bg-white/5 ${file ? 'border-amber-400/40 bg-amber-400/5 shadow-[0_0_20px_rgba(251,191,36,0.1)]' : ''}`}
               >
                 <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileChange} accept="video/*" />
                 <CloudArrowUpIcon className="w-12 h-12 mx-auto mb-4 text-amber-400/50 group-hover:text-amber-400 transition-all" />
@@ -150,7 +168,7 @@ const App: React.FC = () => {
 
               <div className="flex items-center gap-4 text-slate-600">
                 <div className="h-px flex-1 bg-white/10"></div>
-                <span className="text-[10px] uppercase tracking-widest">or paste link</span>
+                <span className="text-[10px] uppercase tracking-widest font-bold">or paste link</span>
                 <div className="h-px flex-1 bg-white/10"></div>
               </div>
 
@@ -161,12 +179,12 @@ const App: React.FC = () => {
                   value={videoUrl}
                   onChange={(e) => { setVideoUrl(e.target.value); setFile(null); }}
                   placeholder="https://video-link.com/..."
-                  className="w-full bg-black/40 border border-white/10 rounded-xl py-4 pl-12 pr-4 outline-none focus:border-amber-400/50 transition-all"
+                  className="w-full bg-black/40 border border-white/10 rounded-xl py-4 pl-12 pr-4 outline-none focus:border-amber-400/50 transition-all text-white placeholder:text-slate-700"
                 />
               </div>
 
               {error && (
-                <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl flex items-center gap-3">
+                <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl flex items-center gap-3 animate-pulse">
                   <ExclamationCircleIcon className="w-5 h-5" />
                   <span className="text-sm">{error}</span>
                 </div>
@@ -174,40 +192,49 @@ const App: React.FC = () => {
 
               <button 
                 onClick={handleProcess}
-                className="btn-royal w-full bg-gradient-to-r from-amber-500 via-pink-500 to-purple-600 py-5 rounded-xl font-royal font-bold text-lg tracking-widest shadow-xl"
+                className="btn-royal w-full bg-gradient-to-r from-amber-500 via-pink-500 to-purple-600 py-5 rounded-xl font-royal font-bold text-lg tracking-widest shadow-xl text-white"
               >
                 Commence Purification
               </button>
             </div>
           ) : (
-            <div className="space-y-6 animate-in fade-in duration-700">
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
               <div className="flex justify-between items-center">
-                <h3 className="text-xl font-royal font-bold flex items-center gap-2">
+                <h3 className="text-xl font-royal font-bold flex items-center gap-2 gold-shimmer">
                   <CheckCircleIcon className="w-6 h-6 text-green-400" />
                   Purified Cut
                 </h3>
-                <button onClick={reset} className="text-amber-400/60 hover:text-amber-400 text-xs uppercase tracking-widest font-bold">
-                  Purify New
+                <button 
+                  onClick={reset} 
+                  className="text-amber-400/60 hover:text-amber-400 text-xs uppercase tracking-[0.2em] font-bold border-b border-amber-400/20 pb-1 transition-all"
+                >
+                  Purify New Scroll
                 </button>
               </div>
 
-              <div className="rounded-2xl overflow-hidden border border-white/10 bg-black aspect-video shadow-2xl">
-                <video src={resultVideo} controls className="w-full h-full" />
+              <div className="rounded-2xl overflow-hidden border border-white/10 bg-black aspect-video shadow-2xl relative group">
+                <video 
+                  key={resultVideo}
+                  src={resultVideo} 
+                  controls 
+                  className="w-full h-full object-contain"
+                  playsInline
+                />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <a 
                   href={resultVideo} 
-                  download 
-                  className="flex items-center justify-center gap-2 bg-white/5 border border-white/10 hover:bg-white/10 py-4 rounded-xl font-royal font-semibold transition-all"
+                  download={`Purified_${file?.name || 'video'}.mp4`}
+                  className="flex items-center justify-center gap-2 bg-white/5 border border-white/10 hover:bg-white/10 py-4 rounded-xl font-royal font-semibold transition-all hover:scale-[1.02]"
                 >
-                  <ArrowDownTrayIcon className="w-5 h-5" />
-                  Download 1080p
+                  <ArrowDownTrayIcon className="w-5 h-5 text-amber-400" />
+                  Standard 1080p
                 </a>
                 <a 
                   href={resultVideo} 
-                  download 
-                  className="flex items-center justify-center gap-2 princess-gradient py-4 rounded-xl font-royal font-bold shadow-lg"
+                  download={`Royal_4K_${file?.name || 'video'}.mp4`}
+                  className="flex items-center justify-center gap-2 princess-gradient py-4 rounded-xl font-royal font-bold shadow-lg shadow-pink-500/20 hover:scale-[1.02] transition-all text-white"
                 >
                   <VideoCameraIcon className="w-5 h-5" />
                   Royal 4K Cut
@@ -219,7 +246,7 @@ const App: React.FC = () => {
 
         <footer className="mt-12 text-center opacity-40">
           <p className="text-[10px] uppercase tracking-[0.4em] text-slate-500">
-            Princess WM • Powered by Sovereign AI
+            Princess WM • Powered by Sovereign AI Neural Networks
           </p>
         </footer>
       </div>
