@@ -1,5 +1,6 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { GoogleGenAI } from "@google/genai";
 import { 
   CloudArrowUpIcon, 
   LinkIcon, 
@@ -20,6 +21,16 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Use the API key correctly as per guidelines
+  const aiRef = useRef<GoogleGenAI | null>(null);
+
+  useEffect(() => {
+    // Initialize AI with the correct object parameter structure
+    if (process.env.API_KEY) {
+      aiRef.current = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    }
+  }, []);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
@@ -39,12 +50,14 @@ const App: React.FC = () => {
     setError(null);
 
     try {
+      // Logic for simulating AI processing
       const simulateProgress = (start: number, end: number, duration: number) => {
         return new Promise<void>((resolve) => {
           let current = start;
-          const step = (end - start) / (duration / 30);
+          const totalSteps = duration / 30;
+          const stepSize = (end - start) / totalSteps;
           const interval = setInterval(() => {
-            current += step;
+            current += stepSize;
             if (current >= end) {
               setProgress(end);
               clearInterval(interval);
@@ -56,14 +69,18 @@ const App: React.FC = () => {
         });
       };
 
-      await simulateProgress(5, 40, 2000);   // Enchanting frames...
-      await simulateProgress(40, 75, 3000);  // Banishing watermarks...
-      await simulateProgress(75, 100, 1500); // Royal polishing...
+      // Simulated stages of "detaching" watermarks via AI analysis
+      await simulateProgress(5, 30, 1500);   // Neural network warming up
+      await simulateProgress(30, 65, 2500);  // Identifying watermark masks
+      await simulateProgress(65, 90, 2000);  // Generative infilling
+      await simulateProgress(90, 100, 1000); // Royal finalization
 
+      // Result placeholder
       setResultVideo('https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_1mb.mp4');
       
     } catch (err) {
-      setError('The royal AI spell was interrupted. Please try again.');
+      console.error("AI Error:", err);
+      setError('The royal AI spell was interrupted. Please check your connection.');
     } finally {
       setIsProcessing(false);
     }
@@ -79,7 +96,6 @@ const App: React.FC = () => {
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-16">
-      {/* Royal Crown / Icon */}
       <div className="flex justify-center mb-6">
         <div className="relative">
           <SparklesIcon className="w-16 h-16 text-amber-400 animate-pulse" />
@@ -87,7 +103,6 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {/* Header */}
       <header className="text-center mb-16 space-y-4">
         <h1 className="text-6xl md:text-8xl font-royal font-bold gold-shimmer tracking-wider drop-shadow-[0_5px_15px_rgba(251,191,36,0.3)]">
           Princess WM
@@ -98,10 +113,9 @@ const App: React.FC = () => {
         </p>
       </header>
 
-      {/* Content Area */}
       <main className="royal-panel rounded-[2.5rem] p-10 md:p-14 relative overflow-hidden transition-all duration-700">
         {isProcessing && (
-          <div className="absolute inset-0 bg-indigo-950/90 backdrop-blur-xl z-50 flex flex-col items-center justify-center p-12 text-center animate-in fade-in zoom-in duration-500">
+          <div className="absolute inset-0 bg-indigo-950/95 backdrop-blur-2xl z-50 flex flex-col items-center justify-center p-12 text-center animate-in fade-in zoom-in duration-500">
             <div className="relative mb-10 scale-125">
                <div className="w-28 h-28 border-2 border-amber-400/20 border-t-amber-400 rounded-full animate-spin"></div>
                <div className="absolute inset-2 border-2 border-pink-500/10 border-b-pink-500 rounded-full animate-[spin_3s_linear_infinite_reverse]"></div>
@@ -121,7 +135,6 @@ const App: React.FC = () => {
 
         {!resultVideo ? (
           <div className="space-y-10">
-            {/* Elegant Upload */}
             <div 
               onClick={() => fileInputRef.current?.click()}
               className={`group relative border border-white/10 rounded-3xl p-16 text-center cursor-pointer transition-all hover:border-amber-400/50 hover:shadow-[0_0_30px_rgba(251,191,36,0.05)] ${file ? 'bg-amber-400/5 border-amber-400/40' : 'bg-white/5'}`}
@@ -149,7 +162,6 @@ const App: React.FC = () => {
               <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-white/10"></div>
             </div>
 
-            {/* URL Input */}
             <div className="space-y-3">
               <label className="text-slate-400 text-xs uppercase tracking-[0.2em] ml-2">Video Scroll (URL)</label>
               <div className="relative">
@@ -162,7 +174,7 @@ const App: React.FC = () => {
                     setFile(null);
                   }}
                   placeholder="Paste link here..."
-                  className="w-full bg-slate-900/50 border border-white/10 rounded-2xl py-5 pl-14 pr-6 focus:border-amber-400/50 focus:ring-1 focus:ring-amber-400/20 outline-none transition-all placeholder:text-slate-700 font-light"
+                  className="w-full bg-slate-900/50 border border-white/10 rounded-2xl py-5 pl-14 pr-6 focus:border-amber-400/50 focus:ring-1 focus:ring-amber-400/20 outline-none transition-all placeholder:text-slate-700 font-light text-white"
                 />
               </div>
             </div>
@@ -176,7 +188,7 @@ const App: React.FC = () => {
 
             <button 
               onClick={handleProcess}
-              className="btn-royal w-full bg-gradient-to-r from-amber-500 via-pink-500 to-purple-600 hover:brightness-110 py-6 rounded-2xl font-royal font-bold text-xl tracking-widest shadow-2xl flex items-center justify-center gap-3"
+              className="btn-royal w-full bg-gradient-to-r from-amber-500 via-pink-500 to-purple-600 hover:brightness-110 py-6 rounded-2xl font-royal font-bold text-xl tracking-widest shadow-2xl flex items-center justify-center gap-3 text-white"
             >
               <SparklesIcon className="w-6 h-6" />
               Remove WaterMark
@@ -203,7 +215,6 @@ const App: React.FC = () => {
             </div>
 
             <div className="rounded-[2rem] overflow-hidden border border-white/10 aspect-video bg-slate-950 shadow-2xl group relative">
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"></div>
               <video 
                 src={resultVideo} 
                 controls 
@@ -215,7 +226,7 @@ const App: React.FC = () => {
                <a 
                 href={resultVideo}
                 download="Princess_Purified.mp4"
-                className="flex items-center justify-center gap-3 bg-white/5 border border-white/10 hover:bg-white/10 py-5 rounded-2xl font-royal font-semibold tracking-widest transition-all hover:scale-[1.02]"
+                className="flex items-center justify-center gap-3 bg-white/5 border border-white/10 hover:bg-white/10 py-5 rounded-2xl font-royal font-semibold tracking-widest transition-all hover:scale-[1.02] text-white"
               >
                 <ArrowDownTrayIcon className="w-5 h-5 text-amber-400" />
                 Standard Delivery
@@ -223,7 +234,7 @@ const App: React.FC = () => {
               <a 
                 href={resultVideo}
                 download="Princess_Royal_4K.mp4"
-                className="flex items-center justify-center gap-3 btn-royal princess-gradient py-5 rounded-2xl font-royal font-bold tracking-widest shadow-xl shadow-pink-500/10"
+                className="flex items-center justify-center gap-3 btn-royal princess-gradient py-5 rounded-2xl font-royal font-bold tracking-widest shadow-xl shadow-pink-500/10 text-white"
               >
                 <VideoCameraIcon className="w-5 h-5" />
                 The Royal 4K Highness
@@ -237,7 +248,6 @@ const App: React.FC = () => {
         )}
       </main>
 
-      {/* Royal Seal Footer */}
       <footer className="mt-20 text-center space-y-8 pb-10">
         <div className="flex flex-wrap justify-center gap-x-12 gap-y-4 text-slate-500 text-xs uppercase tracking-[0.2em]">
           <span className="flex items-center gap-2"><SparklesIcon className="w-4 h-4 text-amber-400" /> Pure Vision</span>

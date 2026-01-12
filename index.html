@@ -90,16 +90,22 @@
     <div class="floating-stars" id="star-container"></div>
     <div id="root"></div>
     <script>
+        // Efficient star creation to avoid layout thrashing
         const container = document.getElementById('star-container');
-        for (let i = 0; i < 100; i++) {
-            const star = document.createElement('div');
-            star.className = 'star';
-            star.style.width = Math.random() * 3 + 'px';
-            star.style.height = star.style.width;
-            star.style.left = Math.random() * 100 + '%';
-            star.style.top = Math.random() * 100 + '%';
-            star.style.setProperty('--duration', (Math.random() * 3 + 2) + 's');
-            container.appendChild(star);
+        if (container) {
+            const fragment = document.createDocumentFragment();
+            for (let i = 0; i < 100; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                const size = Math.random() * 3 + 'px';
+                star.style.width = size;
+                star.style.height = size;
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                star.style.setProperty('--duration', (Math.random() * 3 + 2) + 's');
+                fragment.appendChild(star);
+            }
+            container.appendChild(fragment);
         }
     </script>
 </body>
