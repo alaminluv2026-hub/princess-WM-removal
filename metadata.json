@@ -1,0 +1,8 @@
+{
+  "name": "Princess WM Removal",
+  "description": "High-fidelity AI-powered watermark removal tool with a luxurious aesthetic.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
