@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { 
@@ -25,22 +24,21 @@ const App: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Flag that we are on the client
     setIsMounted(true);
     
-    // Generate stars only after mounting to ensure 0 hydration mismatch
-    const generatedStars = Array.from({ length: 60 }).map((_, i) => ({
+    // Generate stars on client only to avoid React hydration errors
+    const generatedStars = Array.from({ length: 50 }).map((_, i) => ({
       id: i,
       style: {
         position: 'absolute' as const,
         backgroundColor: 'white',
         borderRadius: '50%',
-        opacity: 0.3,
-        width: Math.random() * 3 + 'px',
-        height: Math.random() * 3 + 'px',
-        left: Math.random() * 100 + '%',
-        top: Math.random() * 100 + '%',
-        animation: `twinkle ${(Math.random() * 3 + 2).toFixed(2)}s ease-in-out infinite`
+        opacity: Math.random() * 0.5 + 0.2,
+        width: (Math.random() * 3 + 1) + 'px',
+        height: (Math.random() * 3 + 1) + 'px',
+        left: (Math.random() * 100) + '%',
+        top: (Math.random() * 100) + '%',
+        animation: `twinkle ${(Math.random() * 4 + 2).toFixed(2)}s ease-in-out infinite`
       }
     }));
     setStars(generatedStars);
@@ -56,44 +54,29 @@ const App: React.FC = () => {
 
   const handleProcess = async () => {
     if (!file && !videoUrl) {
-      setError('Your Highness, please provide a video to polish.');
+      setError('Please provide a video file or a link.');
       return;
     }
 
     setIsProcessing(true);
-    setProgress(5);
+    setProgress(0);
     setError(null);
 
     try {
-      // Initialize inside the handler to ensure process.env is accessible
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
-
-      const simulateProgress = (start: number, end: number, duration: number) => {
-        return new Promise<void>((resolve) => {
-          let current = start;
-          const step = (end - start) / (duration / 30);
-          const interval = setInterval(() => {
-            current += step;
-            if (current >= end) {
-              setProgress(end);
-              clearInterval(interval);
-              resolve();
-            } else {
-              setProgress(Math.floor(current));
-            }
-          }, 30);
-        });
-      };
-
-      await simulateProgress(5, 30, 1000);
-      await simulateProgress(30, 70, 2000);
-      await simulateProgress(70, 100, 800);
-
-      setResultVideo('https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_1mb.mp4');
       
+      // Simulate progress steps
+      const steps = 20;
+      for (let i = 0; i <= steps; i++) {
+        await new Promise(resolve => setTimeout(resolve, 150));
+        setProgress(Math.floor((i / steps) * 100));
+      }
+
+      // Placeholder result
+      setResultVideo('https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_1mb.mp4');
     } catch (err) {
-      console.error("Processing Error:", err);
-      setError('The royal AI spell was interrupted. Please try again.');
+      console.error(err);
+      setError('The AI processing failed. Please try again later.');
     } finally {
       setIsProcessing(false);
     }
@@ -107,166 +90,136 @@ const App: React.FC = () => {
     setError(null);
   };
 
-  // Guard against initial server/static render mismatch
-  if (!isMounted) {
-    return <div className="min-h-screen bg-[#020617]" />;
-  }
+  if (!isMounted) return null;
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-[#020617] text-slate-100">
-      {/* Background Stars - Purely Client Side */}
+    <div className="min-h-screen relative overflow-hidden bg-[#020617] text-slate-100 flex flex-col items-center justify-center p-4">
+      {/* Background Stars */}
       <div className="fixed inset-0 pointer-events-none z-0">
         {stars.map(star => (
           <div key={star.id} className="star" style={star.style} />
         ))}
       </div>
 
-      <div className="max-w-5xl mx-auto px-6 py-16 relative z-10">
-        <div className="flex justify-center mb-6">
-          <div className="relative">
-            <SparklesIcon className="w-16 h-16 text-amber-400 animate-pulse" />
-            <HeartIcon className="w-6 h-6 text-pink-500 absolute -bottom-1 -right-1" />
+      <div className="w-full max-w-4xl relative z-10 py-12">
+        <header className="text-center mb-12">
+          <div className="flex justify-center mb-4">
+            <div className="relative">
+              <SparklesIcon className="w-16 h-16 text-amber-400 animate-pulse" />
+              <HeartIcon className="w-6 h-6 text-pink-500 absolute -bottom-1 -right-1" />
+            </div>
           </div>
-        </div>
-
-        <header className="text-center mb-16 space-y-4">
-          <h1 className="text-6xl md:text-8xl font-royal font-bold gold-shimmer tracking-wider drop-shadow-[0_5px_15px_rgba(251,191,36,0.3)]">
+          <h1 className="text-5xl md:text-7xl font-royal font-bold gold-shimmer tracking-widest mb-2">
             Princess WM
           </h1>
-          <div className="inline-block h-px w-32 bg-gradient-to-r from-transparent via-amber-400 to-transparent"></div>
-          <p className="text-slate-300 text-lg md:text-xl font-light uppercase tracking-[0.3em] opacity-80">
-            The Royal Seal of Purity
-          </p>
+          <p className="text-slate-400 uppercase tracking-[0.3em] text-sm">Royal Quality Watermark Removal</p>
         </header>
 
-        <main className="royal-panel rounded-[2.5rem] p-8 md:p-14 relative overflow-hidden">
-          {isProcessing && (
-            <div className="absolute inset-0 bg-indigo-950/95 backdrop-blur-3xl z-50 flex flex-col items-center justify-center p-12 text-center">
-              <div className="relative mb-10 scale-125">
-                 <div className="w-28 h-28 border-2 border-amber-400/20 border-t-amber-400 rounded-full animate-spin"></div>
-                 <div className="absolute inset-2 border-2 border-pink-500/10 border-b-pink-500 rounded-full animate-[spin_3s_linear_infinite_reverse]"></div>
-                 <SparklesIcon className="w-10 h-10 text-amber-400 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+        <main className="royal-panel rounded-[2rem] p-6 md:p-12 relative overflow-hidden min-h-[400px] flex flex-col justify-center">
+          {isProcessing ? (
+            <div className="flex flex-col items-center justify-center space-y-8 animate-in fade-in duration-500">
+              <div className="relative">
+                <div className="w-24 h-24 border-4 border-amber-400/20 border-t-amber-400 rounded-full animate-spin"></div>
+                <SparklesIcon className="w-8 h-8 text-amber-400 absolute inset-0 m-auto" />
               </div>
-              <h3 className="text-3xl font-royal font-bold mb-4 gold-shimmer">Casting the Spell...</h3>
-              <div className="w-full max-w-lg bg-white/5 h-1.5 rounded-full overflow-hidden p-[1px] border border-white/10">
+              <div className="text-center">
+                <h3 className="text-2xl font-royal font-bold gold-shimmer mb-2">Purifying...</h3>
+                <p className="text-slate-500 italic">Polishing pixels with royal grace</p>
+              </div>
+              <div className="w-full max-w-md bg-white/5 h-2 rounded-full overflow-hidden border border-white/10">
                 <div 
-                  className="h-full bg-gradient-to-r from-amber-400 via-pink-500 to-purple-500 transition-all duration-300 shadow-[0_0_15px_rgba(251,191,36,0.5)]" 
+                  className="h-full bg-gradient-to-r from-amber-400 via-pink-500 to-purple-600 transition-all duration-300" 
                   style={{ width: `${progress}%` }}
                 ></div>
               </div>
-              <span className="mt-4 text-amber-400/60 font-mono text-sm">{progress}% Complete</span>
+              <span className="text-amber-400/60 font-mono">{progress}%</span>
             </div>
-          )}
-
-          {!resultVideo ? (
-            <div className="space-y-10">
+          ) : !resultVideo ? (
+            <div className="space-y-8">
               <div 
                 onClick={() => fileInputRef.current?.click()}
-                className={`group relative border border-white/10 rounded-3xl p-12 text-center cursor-pointer transition-all hover:border-amber-400/50 ${file ? 'bg-amber-400/5 border-amber-400/40' : 'bg-white/5'}`}
+                className={`group border-2 border-dashed border-white/10 rounded-3xl p-10 text-center cursor-pointer transition-all hover:border-amber-400/40 hover:bg-white/5 ${file ? 'border-amber-400/40 bg-amber-400/5' : ''}`}
               >
-                <input 
-                  type="file" 
-                  className="hidden" 
-                  ref={fileInputRef} 
-                  onChange={handleFileChange}
-                  accept="video/*"
-                />
-                <CloudArrowUpIcon className="w-16 h-16 mx-auto mb-6 text-amber-400/50 group-hover:text-amber-400 transition-all" />
-                <h2 className="text-2xl font-royal font-medium mb-2 tracking-wide text-white">
-                  {file ? file.name : 'Bestow a File'}
+                <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileChange} accept="video/*" />
+                <CloudArrowUpIcon className="w-12 h-12 mx-auto mb-4 text-amber-400/50 group-hover:text-amber-400 transition-all" />
+                <h2 className="text-xl font-royal font-semibold mb-1">
+                  {file ? file.name : 'Choose Royal Scroll'}
                 </h2>
-                <p className="text-slate-500 text-sm">Upload your royal footage to purify it.</p>
+                <p className="text-slate-500 text-sm">Select a video file to purify</p>
               </div>
 
-              <div className="flex items-center gap-6">
-                <div className="h-[1px] flex-1 bg-white/10"></div>
-                <span className="text-amber-400/40 font-royal text-xs uppercase tracking-widest">Or Path</span>
-                <div className="h-[1px] flex-1 bg-white/10"></div>
+              <div className="flex items-center gap-4 text-slate-600">
+                <div className="h-px flex-1 bg-white/10"></div>
+                <span className="text-[10px] uppercase tracking-widest">or paste link</span>
+                <div className="h-px flex-1 bg-white/10"></div>
               </div>
 
-              <div className="space-y-3">
-                <div className="relative">
-                  <LinkIcon className="w-5 h-5 absolute left-5 top-1/2 -translate-y-1/2 text-amber-400/50" />
-                  <input 
-                    type="text" 
-                    value={videoUrl}
-                    onChange={(e) => {
-                      setVideoUrl(e.target.value);
-                      setFile(null);
-                    }}
-                    placeholder="Paste link here..."
-                    className="w-full bg-slate-900/50 border border-white/10 rounded-2xl py-5 pl-14 pr-6 focus:border-amber-400/50 outline-none transition-all text-white"
-                  />
-                </div>
+              <div className="relative">
+                <LinkIcon className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-amber-400/50" />
+                <input 
+                  type="text" 
+                  value={videoUrl}
+                  onChange={(e) => { setVideoUrl(e.target.value); setFile(null); }}
+                  placeholder="https://video-link.com/..."
+                  className="w-full bg-black/40 border border-white/10 rounded-xl py-4 pl-12 pr-4 outline-none focus:border-amber-400/50 transition-all"
+                />
               </div>
 
               {error && (
-                <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 flex items-center gap-4 text-red-300">
-                  <ExclamationCircleIcon className="w-6 h-6 shrink-0 text-red-400" />
-                  <p className="text-sm font-light">{error}</p>
+                <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl flex items-center gap-3">
+                  <ExclamationCircleIcon className="w-5 h-5" />
+                  <span className="text-sm">{error}</span>
                 </div>
               )}
 
               <button 
                 onClick={handleProcess}
-                className="btn-royal w-full bg-gradient-to-r from-amber-500 via-pink-500 to-purple-600 py-6 rounded-2xl font-royal font-bold text-xl tracking-widest text-white shadow-xl shadow-amber-900/20"
+                className="btn-royal w-full bg-gradient-to-r from-amber-500 via-pink-500 to-purple-600 py-5 rounded-xl font-royal font-bold text-lg tracking-widest shadow-xl"
               >
-                Remove WaterMark
+                Commence Purification
               </button>
             </div>
           ) : (
-            <div className="space-y-8 animate-in fade-in duration-700">
-              <div className="flex justify-between items-end">
-                <div>
-                    <h3 className="text-xl font-royal gold-shimmer font-bold">The Royal Cut</h3>
-                    <p className="text-slate-500 text-xs uppercase tracking-widest">Polished to perfection</p>
-                </div>
-                <button 
-                  onClick={reset}
-                  className="text-amber-400/60 hover:text-amber-400 transition-colors uppercase text-xs tracking-widest font-bold border-b border-amber-400/20"
-                >
-                  New Video
+            <div className="space-y-6 animate-in fade-in duration-700">
+              <div className="flex justify-between items-center">
+                <h3 className="text-xl font-royal font-bold flex items-center gap-2">
+                  <CheckCircleIcon className="w-6 h-6 text-green-400" />
+                  Purified Cut
+                </h3>
+                <button onClick={reset} className="text-amber-400/60 hover:text-amber-400 text-xs uppercase tracking-widest font-bold">
+                  Purify New
                 </button>
               </div>
 
-              <div className="rounded-3xl overflow-hidden border border-white/10 aspect-video bg-black shadow-2xl">
-                <video 
-                  src={resultVideo} 
-                  controls 
-                  className="w-full h-full object-contain"
-                />
+              <div className="rounded-2xl overflow-hidden border border-white/10 bg-black aspect-video shadow-2xl">
+                <video src={resultVideo} controls className="w-full h-full" />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                 <a 
-                  href={resultVideo}
-                  download="Princess_Purified.mp4"
-                  className="flex items-center justify-center gap-3 bg-white/5 border border-white/10 hover:bg-white/10 py-5 rounded-2xl font-royal font-semibold text-white transition-all"
+                <a 
+                  href={resultVideo} 
+                  download 
+                  className="flex items-center justify-center gap-2 bg-white/5 border border-white/10 hover:bg-white/10 py-4 rounded-xl font-royal font-semibold transition-all"
                 >
-                  <ArrowDownTrayIcon className="w-5 h-5 text-amber-400" />
-                  Standard
+                  <ArrowDownTrayIcon className="w-5 h-5" />
+                  Download 1080p
                 </a>
                 <a 
-                  href={resultVideo}
-                  download="Princess_Royal_4K.mp4"
-                  className="flex items-center justify-center gap-3 princess-gradient py-5 rounded-2xl font-royal font-bold text-white shadow-lg"
+                  href={resultVideo} 
+                  download 
+                  className="flex items-center justify-center gap-2 princess-gradient py-4 rounded-xl font-royal font-bold shadow-lg"
                 >
                   <VideoCameraIcon className="w-5 h-5" />
-                  Royal 4K
+                  Royal 4K Cut
                 </a>
               </div>
             </div>
           )}
         </main>
 
-        <footer className="mt-20 text-center space-y-6 opacity-60">
-          <div className="flex justify-center gap-8 text-[10px] uppercase tracking-[0.3em] text-slate-400">
-             <span>Pure Vision</span>
-             <span>Royal Speed</span>
-             <span>Divine AI</span>
-          </div>
-          <p className="text-slate-500 text-[10px] uppercase tracking-[0.4em]">
-            Princess WM Removal • Est. 2024
+        <footer className="mt-12 text-center opacity-40">
+          <p className="text-[10px] uppercase tracking-[0.4em] text-slate-500">
+            Princess WM • Powered by Sovereign AI
           </p>
         </footer>
       </div>
