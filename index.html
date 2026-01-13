@@ -3,24 +3,23 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Princess WM - AI Detachment</title>
-    <!-- Use Tailwind 4 Standalone Browser Build - This permanently silences the production warning -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Princess WM - AI Watermark Erase</title>
     <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✨</text></svg>">
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Montserrat:wght@200;300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👑</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --royal-gold: #fbbf24;
-            --princess-pink: #f472b6;
-            --magic-purple: #8b5cf6;
+            --bg-dark: #050505;
+            --accent: #fbbf24;
         }
         body {
-            font-family: 'Montserrat', sans-serif;
-            background: #020617;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--bg-dark);
             color: #f8fafc;
             margin: 0;
-            overflow-x: hidden;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
         .font-royal { font-family: 'Cinzel', serif; }
         
@@ -34,45 +33,33 @@
         
         @keyframes shimmer { to { background-position: 200% center; } }
         
-        .royal-panel {
-            background: rgba(15, 23, 42, 0.7);
-            backdrop-filter: blur(24px);
-            border: 1px solid rgba(251, 191, 36, 0.15);
-            box-shadow: 0 0 50px rgba(0, 0, 0, 0.6), inset 0 0 30px rgba(244, 114, 182, 0.05);
-        }
-
-        .star {
+        .scanline {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, transparent, rgba(251, 191, 36, 0.1), transparent);
             position: absolute;
-            background: white;
-            border-radius: 50%;
-            opacity: 0.3;
+            top: -100%;
+            left: 0;
+            animation: scan 3s linear infinite;
             pointer-events: none;
         }
 
-        @keyframes twinkle {
-            0%, 100% { transform: scale(1); opacity: 0.2; }
-            50% { transform: scale(1.4); opacity: 0.7; }
-        }
-
-        .princess-gradient {
-            background: linear-gradient(135deg, #f472b6 0%, #fb7185 50%, #8b5cf6 100%);
-        }
-
-        .scanline {
-            width: 100%;
-            height: 2px;
-            background: rgba(251, 191, 36, 0.5);
-            box-shadow: 0 0 15px rgba(251, 191, 36, 0.8);
-            position: absolute;
-            top: 0;
-            left: 0;
-            animation: scan 2s linear infinite;
-            z-index: 20;
-        }
-
         @keyframes scan {
-            from { top: 0%; }
+            from { top: -100%; }
             to { top: 100%; }
+        }
+
+        .animate-spin-slow {
+            animation: spin 8s linear infinite;
+        }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        /* Hide scrollbars but keep functionality */
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+        video::-webkit-media-controls {
+            display: none !important;
         }
     </style>
 <script type="importmap">
