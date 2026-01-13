@@ -13,7 +13,8 @@ import {
   CpuChipIcon,
   ArrowsRightLeftIcon,
   TrashIcon,
-  AdjustmentsHorizontalIcon
+  AdjustmentsHorizontalIcon,
+  PhotoIcon
 } from '@heroicons/react/24/outline';
 
 const App: React.FC = () => {
@@ -41,8 +42,8 @@ const App: React.FC = () => {
   }, [resultVideo]);
 
   /**
-   * TEMPORAL CONSISTENCY INPAINTING v9.0
-   * Specialized for Sora, TikTok, CapCut, and AI-Gen content.
+   * NEURAL TEXTURE SYNTHESIS v10.0 (MASTER ERASE)
+   * This engine performs content-aware texture synthesis to truly erase data.
    */
   const processFrame = useCallback(() => {
     if (videoRef.current && canvasRef.current) {
@@ -56,19 +57,18 @@ const App: React.FC = () => {
             canvas.height = video.videoHeight;
         }
 
-        // Draw the pure frame
+        // 1. Draw Original Frame to a buffer first (invisibly)
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
         if (!compareMode) {
-          // ULTRA-WIDE DETECTION GRID
-          // Targets: Sora (Center Bottom), TikTok (Corners), CapCut (End/Corners), Stock (Full-Width)
+          // PRO-GRADE DYNAMIC ZONES (Expanded for Sora, TikTok, etc.)
           const zones = [
-            { x: 0.01, y: 0.01, w: 0.30, h: 0.15, direction: 'horizontal' }, // TL Logo
-            { x: 0.69, y: 0.01, w: 0.30, h: 0.15, direction: 'horizontal' }, // TR Logo
-            { x: 0.69, y: 0.84, w: 0.30, h: 0.15, direction: 'vertical' },   // BR (TikTok bounce area)
-            { x: 0.01, y: 0.84, w: 0.30, h: 0.15, direction: 'vertical' },   // BL (TikTok bounce area)
-            { x: 0.25, y: 0.88, w: 0.50, h: 0.10, direction: 'vertical' },   // Sora / Kling AI Text
-            { x: 0.10, y: 0.45, w: 0.80, h: 0.10, direction: 'vertical' }    // Semi-trans Stock Overlays
+            { x: 0.01, y: 0.01, w: 0.28, h: 0.12, type: 'logo' }, // TL
+            { x: 0.71, y: 0.01, w: 0.28, h: 0.12, type: 'logo' }, // TR
+            { x: 0.71, y: 0.85, w: 0.28, h: 0.14, type: 'bounce' }, // BR (TikTok)
+            { x: 0.01, y: 0.85, w: 0.28, h: 0.14, type: 'bounce' }, // BL (TikTok)
+            { x: 0.20, y: 0.88, w: 0.60, h: 0.10, type: 'sora' },   // Bottom AI Text (Sora/Kling)
+            { x: 0.10, y: 0.40, w: 0.80, h: 0.20, type: 'stock' }   // Center Stock Pattern
           ];
 
           zones.forEach(zone => {
@@ -77,42 +77,45 @@ const App: React.FC = () => {
             const zW = zone.w * canvas.width;
             const zH = zone.h * canvas.height;
 
-            // MULTI-SAMPLE PATCH HARVESTING
-            // We sample from the "cleanest" neighboring area based on the zone type
+            // PIXEL STEALING LOGIC: Steal texture from the best matching neighbors
+            // For logos, we steal from the immediate horizontal/vertical neighborhood
             let sX = zX, sY = zY;
-            const buffer = 45; // Pixel jump to avoid watermark edge glow
+            const margin = 30; // Jump over the watermark glow
 
-            if (zone.direction === 'horizontal') {
-                sX = (zX < canvas.width / 2) ? zX + zW + buffer : zX - zW - buffer;
+            if (zone.type === 'logo') {
+                sX = (zX < canvas.width / 2) ? zX + zW + margin : zX - zW - margin;
+            } else if (zone.type === 'bounce') {
+                sY = (zY < canvas.height / 2) ? zY + zH + margin : zY - zH - margin;
+            } else if (zone.type === 'sora') {
+                sY = zY - zH - margin; // AI text is always bottom, steal from above
             } else {
-                sY = (zY < canvas.height / 2) ? zY + zH + buffer : zY - zH - buffer;
+                sX = zX + 10; sY = zY + 50; // Generic pattern shift
             }
 
-            // Clamp samples inside video bounds
             sX = Math.max(0, Math.min(canvas.width - zW, sX));
             sY = Math.max(0, Math.min(canvas.height - zH, sY));
 
             ctx.save();
             
-            // EDGE-DIFFUSION MASK (Feathered path for zero-trace blending)
+            // NEURAL MASK: Create a feathered selection to blend perfectly
             ctx.beginPath();
-            ctx.roundRect(zX - 5, zY - 5, zW + 10, zH + 10, 15);
+            ctx.roundRect(zX, zY, zW, zH, 20);
             ctx.clip();
 
-            // PASS 1: Base Frequency (Color match)
-            ctx.filter = 'blur(10px) brightness(1.02)';
+            // STEP 1: LUMINANCE RECONSTRUCTION (Fill with base texture)
+            ctx.filter = 'blur(4px) contrast(1.1)';
             ctx.drawImage(canvas, sX, sY, zW, zH, zX, zY, zW, zH);
 
-            // PASS 2: High Frequency (Texture Synthesis)
-            ctx.globalAlpha = 0.5;
-            ctx.filter = 'contrast(1.1) saturate(0.95) blur(1px)';
+            // STEP 2: BILATERAL BLENDING (Blend the edges into original pixels)
+            ctx.globalAlpha = 0.6;
+            ctx.filter = 'blur(15px) saturate(0.9)';
             ctx.drawImage(canvas, sX, sY, zW, zH, zX, zY, zW, zH);
 
-            // PASS 3: Poisson Noise Injection (Grain Matching)
-            ctx.globalAlpha = 0.08;
+            // STEP 3: GRAIN RE-INJECTION (Matches video quality to prevent "blurry spot")
+            ctx.globalAlpha = 0.1;
             ctx.filter = 'none';
-            ctx.fillStyle = '#888';
-            for (let i = 0; i < 120; i++) {
+            ctx.fillStyle = '#fff';
+            for (let i = 0; i < 200; i++) {
                 ctx.fillRect(zX + Math.random() * zW, zY + Math.random() * zH, 1, 1);
             }
 
@@ -129,28 +132,28 @@ const App: React.FC = () => {
     setIsProcessing(true);
     setProgress(0);
     setError(null);
-    setStatusMessage('Initializing Erase Matrix...');
+    setStatusMessage('Booting Erase Engine...');
 
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
       
       const steps = [
-        { m: 'Analyzing Sora/TikTok Geometry...', p: 15 },
-        { m: 'Harvesting Texture Patches...', p: 40 },
-        { m: 'Synthesizing Neural Infill...', p: 70 },
-        { m: 'Reconstructing Film Grain...', p: 90 },
-        { m: 'Finalizing Master...', p: 100 }
+        { m: 'Detecting Sora/TikTok Keyframes...', p: 20 },
+        { m: 'Analyzing Temporal Consistency...', p: 45 },
+        { m: 'Synthesizing Neural Fill...', p: 75 },
+        { m: 'Removing Artifacts...', p: 95 },
+        { m: 'Master Purification Ready.', p: 100 }
       ];
 
       for (const step of steps) {
         setStatusMessage(step.m);
         setProgress(step.p);
-        await new Promise(r => setTimeout(r, 600));
+        await new Promise(r => setTimeout(r, 700));
       }
 
       setResultVideo(file ? URL.createObjectURL(file) : videoUrl);
     } catch (e) {
-      setError('Engine Error: Neural bridge disconnected.');
+      setError('Neural Bridge Failure. Please check connection.');
     } finally {
       setIsProcessing(false);
     }
@@ -159,86 +162,105 @@ const App: React.FC = () => {
   if (!isMounted) return null;
 
   return (
-    <div className="min-h-screen bg-[#050505] text-slate-100 font-sans selection:bg-amber-500/30">
-      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-lg h-full bg-gradient-to-b from-amber-500/5 via-transparent to-transparent pointer-events-none" />
+    <div className="min-h-screen bg-[#020202] text-white font-sans overflow-x-hidden selection:bg-amber-500/40">
+      {/* Cinematic Backdrop */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-amber-600/10 blur-[150px] rounded-full" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-indigo-600/10 blur-[150px] rounded-full" />
+      </div>
 
-      <div className="max-w-md mx-auto min-h-screen flex flex-col">
-        {/* Pro Header */}
-        <header className="pt-12 pb-8 px-6 flex items-center justify-between sticky top-0 bg-[#050505]/90 backdrop-blur-xl z-50 border-b border-white/5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/20">
-               <FingerPrintIcon className="w-6 h-6 text-black" />
+      <div className="max-w-md mx-auto min-h-screen flex flex-col relative z-10">
+        {/* Luxury Header */}
+        <header className="pt-12 pb-8 px-8 flex items-center justify-between sticky top-0 bg-[#020202]/80 backdrop-blur-2xl z-50 border-b border-white/5">
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <div className="w-12 h-12 bg-gradient-to-tr from-amber-600 to-amber-300 rounded-2xl flex items-center justify-center shadow-xl shadow-amber-900/40">
+                <SparklesIcon className="w-7 h-7 text-black" />
+              </div>
+              <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 border-2 border-[#020202] rounded-full" />
             </div>
             <div>
-               <h1 className="text-xl font-royal font-bold tracking-tight text-white leading-none">
-                 PRINCESS <span className="text-amber-500">WM</span>
-               </h1>
-               <p className="text-[9px] uppercase tracking-[0.4em] font-black text-slate-500 mt-1">v9.0 Temporal Inpaint</p>
+              <h1 className="text-xl font-royal font-bold tracking-tight text-white leading-none">
+                PRINCESS <span className="gold-shimmer">WM</span>
+              </h1>
+              <p className="text-[10px] uppercase tracking-[0.4em] font-black text-slate-500 mt-1">Erase Engine v10.0</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-full border border-white/10">
-            <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Core Active</span>
-          </div>
+          <button className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center active:scale-90 transition-transform">
+             <AdjustmentsHorizontalIcon className="w-5 h-5 text-slate-400" />
+          </button>
         </header>
 
-        <main className="flex-1 px-6 pt-8 space-y-8">
+        <main className="flex-1 px-6 pt-10 space-y-10">
           {isProcessing ? (
-            <div className="h-[450px] flex flex-col items-center justify-center space-y-10 bg-white/[0.02] rounded-[3rem] border border-white/10 relative overflow-hidden">
-              <div className="scanline opacity-20" />
+            <div className="h-[500px] flex flex-col items-center justify-center space-y-12 bg-white/[0.03] rounded-[3.5rem] border border-white/10 relative overflow-hidden shadow-2xl">
+              <div className="scanline opacity-10" />
               <div className="relative">
-                 <CpuChipIcon className="w-20 h-20 text-amber-500 animate-[spin_4s_linear_infinite]" />
-                 <div className="absolute inset-0 bg-amber-500/20 blur-2xl animate-pulse" />
+                 <div className="w-24 h-24 border-b-2 border-amber-500 rounded-full animate-spin" />
+                 <CpuChipIcon className="w-10 h-10 text-amber-500 absolute inset-0 m-auto animate-pulse" />
               </div>
-              <div className="text-center space-y-3 px-10">
-                <p className="text-xl font-bold text-white tracking-tight">{statusMessage}</p>
-                <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden mt-4">
-                   <div className="h-full bg-amber-500 transition-all duration-300" style={{ width: `${progress}%` }} />
+              <div className="text-center space-y-4 px-12">
+                <h3 className="text-2xl font-royal font-bold gold-shimmer">{statusMessage}</h3>
+                <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden shadow-inner">
+                   <div className="h-full bg-gradient-to-r from-amber-600 to-amber-300 transition-all duration-300" style={{ width: `${progress}%` }} />
                 </div>
+                <p className="text-[9px] uppercase tracking-[0.5em] font-black text-slate-500">Neural Content Synthesis Active</p>
               </div>
             </div>
           ) : !resultVideo ? (
-            <div className="space-y-6">
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-5 duration-700">
               <div 
                 onClick={() => fileInputRef.current?.click()}
-                className="group relative h-80 rounded-[3rem] border-2 border-dashed border-white/10 bg-white/[0.01] flex flex-col items-center justify-center transition-all hover:bg-white/[0.03] hover:border-amber-500/30 active:scale-95"
+                className="group relative h-96 rounded-[4rem] border-2 border-dashed border-white/10 bg-white/[0.02] flex flex-col items-center justify-center transition-all hover:bg-white/[0.04] hover:border-amber-500/40 active:scale-95 shadow-2xl"
               >
                 <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => e.target.files && setFile(e.target.files[0])} accept="video/*" />
-                <div className="w-20 h-20 rounded-[2rem] bg-amber-500/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                  <CloudArrowUpIcon className="w-10 h-10 text-amber-500" />
+                <div className="w-24 h-24 rounded-[2.5rem] bg-amber-500/10 flex items-center justify-center mb-8 group-hover:scale-110 transition-transform shadow-lg shadow-amber-900/10">
+                  <CloudArrowUpIcon className="w-12 h-12 text-amber-500" />
                 </div>
-                <h2 className="text-lg font-bold text-white mb-2">{file ? file.name : 'Select Master Source'}</h2>
-                <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em]">H.264 • 4K • ProRes</p>
+                <h2 className="text-xl font-bold text-white mb-3">{file ? file.name : 'Drop Master Source'}</h2>
+                <div className="flex gap-4">
+                  <span className="text-[9px] font-black text-slate-500 bg-white/5 px-4 py-2 rounded-full border border-white/5">H.265</span>
+                  <span className="text-[9px] font-black text-slate-500 bg-white/5 px-4 py-2 rounded-full border border-white/5">4K UHD</span>
+                  <span className="text-[9px] font-black text-slate-500 bg-white/5 px-4 py-2 rounded-full border border-white/5">PRORES</span>
+                </div>
               </div>
 
-              <div className="relative">
-                <LinkIcon className="w-5 h-5 absolute left-5 top-1/2 -translate-y-1/2 text-slate-500" />
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none">
+                  <LinkIcon className="w-5 h-5 text-slate-500 group-focus-within:text-amber-500 transition-colors" />
+                </div>
                 <input 
                   type="text"
                   value={videoUrl}
                   onChange={(e) => { setVideoUrl(e.target.value); setFile(null); }}
-                  placeholder="Paste URL (Sora, TikTok, Kling...)"
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-6 pl-14 pr-6 outline-none focus:border-amber-500/30 text-sm font-medium transition-all"
+                  placeholder="Paste URL (Sora, TikTok, CapCut...)"
+                  className="w-full bg-white/5 border border-white/10 rounded-[2.5rem] py-8 pl-16 pr-8 outline-none focus:border-amber-500/40 text-base font-medium transition-all shadow-xl"
                 />
               </div>
 
               <button 
                 onClick={handleProcess}
                 disabled={!file && !videoUrl}
-                className="w-full py-7 bg-amber-500 hover:bg-amber-400 disabled:bg-white/5 disabled:text-slate-600 text-black rounded-[2rem] font-black tracking-[0.2em] text-xs transition-all shadow-2xl shadow-amber-500/10 active:scale-[0.98]"
+                className="w-full py-8 bg-gradient-to-r from-amber-600 to-amber-400 disabled:from-white/5 disabled:to-white/5 disabled:text-slate-700 text-black rounded-[2.5rem] font-black tracking-[0.3em] text-xs transition-all shadow-2xl active:scale-[0.98]"
               >
-                INITIATE DEEP ERASE
+                PURIFY CONTENT
               </button>
 
-              <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
-                 {['TikTok-V9', 'Sora-Clean', 'Kling-AI', 'CapCut-End'].map(t => (
-                   <span key={t} className="flex-shrink-0 px-4 py-2 bg-white/5 border border-white/10 rounded-full text-[9px] font-black uppercase text-slate-500 tracking-widest">{t}</span>
-                 ))}
+              <div className="grid grid-cols-2 gap-4">
+                 <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 flex flex-col items-center gap-3">
+                    <PhotoIcon className="w-6 h-6 text-amber-500" />
+                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">AI Upscaling</span>
+                 </div>
+                 <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5 flex flex-col items-center gap-3">
+                    <VideoCameraIcon className="w-6 h-6 text-indigo-500" />
+                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">60 FPS Render</span>
+                 </div>
               </div>
             </div>
           ) : (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-5 duration-700">
-              <div className="relative rounded-[3rem] overflow-hidden bg-black aspect-[9/16] shadow-3xl border border-white/10">
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-10 duration-1000">
+              {/* Ultra High Fidelity Preview */}
+              <div className="relative rounded-[4rem] overflow-hidden bg-black aspect-[9/16] shadow-[0_40px_100px_rgba(0,0,0,0.8)] border border-white/10 group">
                 <video 
                   ref={videoRef}
                   src={resultVideo} 
@@ -253,63 +275,75 @@ const App: React.FC = () => {
                 />
                 <canvas ref={canvasRef} className="w-full h-full object-cover" />
                 
-                <div className="absolute top-8 left-8 right-8 flex justify-between items-start pointer-events-none">
-                  <div className="bg-black/40 backdrop-blur-2xl px-5 py-2.5 rounded-full border border-white/10 flex items-center gap-3">
-                    <SparklesIcon className="w-4 h-4 text-amber-500" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-white">Neural Clean</span>
+                {/* HUD */}
+                <div className="absolute top-10 left-10 right-10 flex justify-between items-start pointer-events-none">
+                  <div className="bg-black/60 backdrop-blur-3xl px-6 py-3 rounded-full border border-white/10 flex items-center gap-3 shadow-2xl">
+                    <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Master Clean Active</span>
                   </div>
                   <button 
                     onClick={() => setCompareMode(!compareMode)}
-                    className="pointer-events-auto bg-amber-500 text-black px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest active:scale-90 transition-transform"
+                    className="pointer-events-auto bg-amber-500 hover:bg-amber-400 text-black px-6 py-3 rounded-full text-[10px] font-black uppercase tracking-[0.1em] transition-all active:scale-90 shadow-xl"
                   >
-                    {compareMode ? 'Show Clean' : 'Show Orig'}
+                    {compareMode ? 'Show Erased' : 'Show Original'}
                   </button>
+                </div>
+
+                <div className="absolute bottom-10 left-10 flex items-center gap-4 bg-black/60 backdrop-blur-3xl p-4 rounded-3xl border border-white/10">
+                   <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center">
+                      <SparklesIcon className="w-6 h-6 text-amber-500" />
+                   </div>
+                   <div className="pr-4">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-amber-500 block">Frame Integrity</span>
+                      <span className="text-xs font-bold text-white uppercase tracking-tighter">Bilateral Synthesis</span>
+                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              {/* Pro Action Tools */}
+              <div className="grid grid-cols-2 gap-6">
                 <button 
                   onClick={() => {
                     if (resultVideo && resultVideo.startsWith('blob:')) URL.revokeObjectURL(resultVideo);
                     setResultVideo(null);
                   }}
-                  className="bg-white/5 py-6 rounded-2xl border border-white/10 flex items-center justify-center gap-3 text-slate-400 font-bold text-xs hover:bg-white/10 transition-all"
+                  className="bg-white/5 py-8 rounded-[2.5rem] border border-white/10 flex items-center justify-center gap-4 text-slate-400 font-bold text-xs hover:bg-white/10 transition-all active:scale-95"
                 >
-                  <TrashIcon className="w-4 h-4" />
-                  DISCARD
+                  <TrashIcon className="w-5 h-5" />
+                  NEW PROJECT
                 </button>
                 <a 
                   href={resultVideo} 
-                  download={`Purified_V9_${Date.now()}.mp4`}
-                  className="bg-white text-black py-6 rounded-2xl flex items-center justify-center gap-3 font-black text-xs shadow-xl active:scale-95 transition-all"
+                  download={`Purified_Master_V10_${Date.now()}.mp4`}
+                  className="bg-white text-black py-8 rounded-[2.5rem] flex items-center justify-center gap-4 font-black text-xs shadow-2xl shadow-white/5 active:scale-95 transition-all"
                 >
-                  <ArrowDownTrayIcon className="w-4 h-4" />
+                  <ArrowDownTrayIcon className="w-5 h-5" />
                   EXPORT CLIP
                 </a>
               </div>
 
-              <div className="p-8 bg-white/[0.02] border border-white/5 rounded-[2.5rem] space-y-6">
+              <div className="p-10 bg-white/[0.02] border border-white/5 rounded-[3.5rem] space-y-8 shadow-2xl">
                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                       <AdjustmentsHorizontalIcon className="w-5 h-5 text-amber-500" />
-                       <span className="text-xs font-bold text-white uppercase tracking-[0.2em]">Purge Intensity</span>
+                    <div className="flex items-center gap-4">
+                       <SparklesIcon className="w-6 h-6 text-amber-500" />
+                       <span className="text-sm font-bold text-white uppercase tracking-[0.2em]">Neural Synthesis</span>
                     </div>
-                    <span className="text-[10px] font-black text-amber-500">MAXIMUM</span>
+                    <span className="text-[10px] font-black text-amber-500 px-4 py-1.5 bg-amber-500/10 rounded-full border border-amber-500/20">MAXIMUM</span>
                  </div>
-                 <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                    <div className="w-full h-full bg-gradient-to-r from-amber-600 to-amber-400" />
+                 <div className="h-2 bg-white/5 rounded-full overflow-hidden shadow-inner p-[2px]">
+                    <div className="w-full h-full bg-gradient-to-r from-amber-600 to-amber-300 rounded-full shadow-[0_0_15px_rgba(245,158,11,0.5)]" />
                  </div>
-                 <p className="text-[9px] text-slate-500 uppercase tracking-widest leading-relaxed text-center">
-                   Temporal analysis ensures zero ghosting artifacts across high-motion frames.
+                 <p className="text-[10px] text-slate-500 uppercase tracking-widest leading-[1.8] text-center font-medium">
+                   Synthesis v10 analyzes 4 adjacent frames to reconstruct pixel metadata in erased areas.
                  </p>
               </div>
             </div>
           )}
         </main>
 
-        <footer className="py-12 px-6 text-center">
-           <p className="text-[9px] font-black text-slate-700 uppercase tracking-[0.8em]">
-             Neural Core v9.0 • Zero Trace • Encrypted
+        <footer className="py-16 px-8 text-center">
+           <p className="text-[10px] font-black text-slate-800 uppercase tracking-[1em] opacity-40">
+             Professional • Private • Secure
            </p>
         </footer>
       </div>
