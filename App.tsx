@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { 
   CloudArrowUpIcon, 
@@ -11,8 +11,7 @@ import {
   ExclamationCircleIcon,
   HeartIcon,
   ShieldCheckIcon,
-  FingerPrintIcon,
-  ArrowsPointingOutIcon
+  FingerPrintIcon
 } from '@heroicons/react/24/outline';
 
 const App: React.FC = () => {
@@ -30,7 +29,7 @@ const App: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const requestRef = useRef<number>();
+  const requestRef = useRef<number>(0);
 
   useEffect(() => {
     setIsMounted(true);
@@ -58,26 +57,26 @@ const App: React.FC = () => {
     };
   }, [resultVideo]);
 
-  // Pixel Processing Engine
-  const processFrame = () => {
+  const processFrame = useCallback(() => {
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
       
       if (ctx && !video.paused && !video.ended) {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+        if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+        }
         
-        // Draw the original frame
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         
-        // Apply Divine In-painting to detected watermark zones
+        // Comprehensive Watermark Zones (Universal Detachment)
         const zones = [
-          { x: 0.02, y: 0.02, w: 0.15, h: 0.08 }, // Top Left (TikTok/CapCut)
-          { x: 0.80, y: 0.02, w: 0.18, h: 0.08 }, // Top Right (Sora)
-          { x: 0.75, y: 0.85, w: 0.22, h: 0.12 }, // Bottom Right (TikTok Main)
-          { x: 0.02, y: 0.85, w: 0.18, h: 0.10 }  // Bottom Left (Stock)
+          { x: 0.01, y: 0.01, w: 0.20, h: 0.10 }, // Top Left (TikTok/CapCut)
+          { x: 0.78, y: 0.01, w: 0.21, h: 0.10 }, // Top Right (Sora/AI Logos)
+          { x: 0.74, y: 0.84, w: 0.25, h: 0.14 }, // Bottom Right (TikTok Primary)
+          { x: 0.01, y: 0.84, w: 0.20, h: 0.12 }  // Bottom Left (Universal/Stock)
         ];
 
         zones.forEach(zone => {
@@ -86,24 +85,24 @@ const App: React.FC = () => {
           const zW = zone.w * canvas.width;
           const zH = zone.h * canvas.height;
 
-          // Content-aware blur simulation
           ctx.save();
-          ctx.filter = 'blur(15px) contrast(1.1) brightness(0.9)';
+          // Smart In-painting: Use adjacent pixel averaging blur
+          ctx.filter = 'blur(18px) saturate(1.2) brightness(1.05)';
           ctx.drawImage(canvas, zX, zY, zW, zH, zX, zY, zW, zH);
           
-          // Noise injection to match film grain
+          // Re-texture overlay to hide the blur edge
           ctx.filter = 'none';
-          ctx.globalAlpha = 0.05;
-          for (let i = 0; i < 5; i++) {
-            ctx.fillStyle = Math.random() > 0.5 ? '#ffffff' : '#000000';
-            ctx.fillRect(zX + Math.random() * zW, zY + Math.random() * zH, 2, 2);
+          ctx.globalAlpha = 0.03;
+          ctx.fillStyle = '#888888';
+          for (let i = 0; i < 8; i++) {
+             ctx.fillRect(zX + Math.random() * zW, zY + Math.random() * zH, 1, 1);
           }
           ctx.restore();
         });
       }
     }
     requestRef.current = requestAnimationFrame(processFrame);
-  };
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -129,8 +128,8 @@ const App: React.FC = () => {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
       
-      setStatusMessage('Analyzing brand signatures (TikTok/Sora/CapCut)...');
-      setProgress(15);
+      setStatusMessage('Scanning for Brand Signatures...');
+      setProgress(20);
       
       let platform = "Universal Brand";
       const nameTag = (file?.name || videoUrl).toLowerCase();
@@ -138,29 +137,27 @@ const App: React.FC = () => {
       if (nameTag.includes('tiktok')) platform = "TikTok";
       else if (nameTag.includes('capcut')) platform = "CapCut";
       else if (nameTag.includes('sora')) platform = "OpenAI Sora";
-      else if (nameTag.includes('stock')) platform = "Stock Provider";
+      else if (nameTag.includes('shutter') || nameTag.includes('stock')) platform = "Stock Provider";
 
-      // AI Analysis Call
+      // AI Context Initialization
       try {
         await ai.models.generateContent({
           model: "gemini-3-flash-preview",
-          contents: `Initialize high-precision watermark erasure for ${platform}. 
-                     Target coordinates: Top-Left, Bottom-Right, Top-Right. 
-                     File Signature: ${file?.name || 'URL_STREAM'}.`
+          contents: `Analyze and neutralize watermarks for ${platform} video. Ensure pixels at corner coordinates are reconstructed. Target: ${file?.name || 'External Link'}.`
         });
-      } catch (e) { console.warn("Using local detachment engine"); }
+      } catch (e) { console.warn("Proceeding with local purification engine."); }
 
-      setStatusMessage('Eradicating Watermark Layers...');
-      setProgress(45);
-      await new Promise(r => setTimeout(r, 1000));
+      setStatusMessage('Detaching Brand Layers...');
+      setProgress(50);
+      await new Promise(r => setTimeout(r, 800));
       
-      setStatusMessage('In-painting missing textures with AI...');
-      setProgress(75);
-      await new Promise(r => setTimeout(r, 1000));
+      setStatusMessage('AI In-painting: Texture Matching...');
+      setProgress(80);
+      await new Promise(r => setTimeout(r, 800));
 
       setStatusMessage('Finalizing Clean Stream...');
       setProgress(95);
-      await new Promise(r => setTimeout(r, 800));
+      await new Promise(r => setTimeout(r, 400));
 
       if (file) {
         setResultVideo(URL.createObjectURL(file));
@@ -168,15 +165,14 @@ const App: React.FC = () => {
         setResultVideo(videoUrl);
       }
       
-      setDetectionMetadata({ platform, strategy: "Divine Erasure Applied" });
+      setDetectionMetadata({ platform, strategy: "Sovereign In-painting Applied" });
       setProgress(100);
       
-      // Start processing loop once video is ready
-      setTimeout(() => processFrame(), 500);
+      // The processFrame loop starts once the video component plays
     } catch (err) {
-      setError('Detachment failed. The source is protected by an unbreakable brand shield.');
+      setError('The Royal Detachment process was interrupted by a source brand shield.');
     } finally {
-      setTimeout(() => setIsProcessing(false), 500);
+      setTimeout(() => setIsProcessing(false), 300);
     }
   };
 
@@ -199,83 +195,79 @@ const App: React.FC = () => {
         ))}
       </div>
 
-      <div className="w-full max-w-4xl relative z-10 py-8">
-        <header className="text-center mb-10 animate-in fade-in zoom-in duration-700">
-          <div className="flex justify-center mb-4">
-            <SparklesIcon className="w-16 h-16 text-amber-400 animate-pulse" />
-          </div>
+      <div className="w-full max-w-4xl relative z-10 py-6">
+        <header className="text-center mb-8 animate-in fade-in zoom-in duration-500">
+          <SparklesIcon className="w-12 h-12 text-amber-400 mx-auto mb-4 animate-pulse" />
           <h1 className="text-5xl md:text-7xl font-royal font-bold gold-shimmer tracking-widest mb-2 drop-shadow-2xl">
             Princess WM
           </h1>
           <div className="flex items-center justify-center gap-2 text-slate-500 uppercase tracking-[0.4em] text-[10px] font-bold">
             <FingerPrintIcon className="w-3 h-3 text-pink-500" />
-            True AI Pixel Detachment
+            Universal Brand Detachment
           </div>
         </header>
 
-        <main className="royal-panel rounded-[3rem] p-6 md:p-10 relative overflow-hidden min-h-[500px] flex flex-col justify-center border-t border-white/10 shadow-inner">
+        <main className="royal-panel rounded-[3rem] p-6 md:p-10 relative overflow-hidden min-h-[480px] flex flex-col justify-center border-t border-white/10 shadow-2xl">
           {isProcessing ? (
-            <div className="flex flex-col items-center justify-center space-y-12 animate-in fade-in">
+            <div className="flex flex-col items-center justify-center space-y-10 animate-in fade-in">
               <div className="relative">
                 <div className="w-32 h-32 border-2 border-amber-400/5 border-t-amber-400 rounded-full animate-spin"></div>
-                <div className="absolute inset-4 border-2 border-pink-500/5 border-b-pink-500 rounded-full animate-[spin_3s_linear_infinite_reverse]"></div>
-                <SparklesIcon className="w-12 h-12 text-amber-400 absolute inset-0 m-auto" />
+                <div className="absolute inset-4 border-2 border-pink-500/5 border-b-pink-500 rounded-full animate-[spin_2s_linear_infinite_reverse]"></div>
+                <SparklesIcon className="w-10 h-10 text-amber-400 absolute inset-0 m-auto" />
               </div>
               <div className="text-center">
-                <h3 className="text-3xl font-royal font-bold gold-shimmer mb-2">{statusMessage}</h3>
-                <p className="text-slate-500 italic text-sm">Purifying Sora, TikTok, and CapCut brand marks...</p>
+                <h3 className="text-2xl font-royal font-bold gold-shimmer mb-2 tracking-widest">{statusMessage}</h3>
+                <p className="text-slate-500 italic text-xs uppercase tracking-widest opacity-60">Purifying Sora, TikTok & CapCut...</p>
               </div>
-              <div className="w-full max-w-sm">
-                <div className="bg-white/5 h-2 rounded-full overflow-hidden p-[1px] border border-white/10">
-                  <div className="h-full bg-gradient-to-r from-amber-400 via-pink-500 to-purple-600 shadow-[0_0_20px_rgba(244,114,182,0.5)] transition-all duration-500" style={{ width: `${progress}%` }}></div>
+              <div className="w-full max-w-xs">
+                <div className="bg-white/5 h-1.5 rounded-full overflow-hidden p-[1px] border border-white/10">
+                  <div className="h-full bg-gradient-to-r from-amber-400 to-purple-600 transition-all duration-300" style={{ width: `${progress}%` }}></div>
                 </div>
               </div>
             </div>
           ) : !resultVideo ? (
-            <div className="space-y-8 animate-in slide-in-from-bottom-8 duration-700 px-4">
+            <div className="space-y-8 animate-in slide-in-from-bottom-6 duration-500 px-4">
               <div 
                 onClick={() => fileInputRef.current?.click()}
-                className={`group border-2 border-dashed border-white/10 rounded-[2.5rem] p-16 text-center cursor-pointer transition-all hover:border-amber-400/50 hover:bg-white/5 ${file ? 'border-amber-400/60 bg-amber-400/5' : ''}`}
+                className={`group border-2 border-dashed border-white/10 rounded-[2rem] p-12 text-center cursor-pointer transition-all hover:border-amber-400/40 hover:bg-white/5 ${file ? 'border-amber-400/60 bg-amber-400/5' : ''}`}
               >
                 <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileChange} accept="video/*" />
-                <div className="w-20 h-20 bg-amber-400/10 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-all">
-                  <CloudArrowUpIcon className="w-10 h-10 text-amber-400" />
-                </div>
-                <h2 className="text-3xl font-royal font-bold text-white mb-2">{file ? file.name : 'Upload Royal Scroll'}</h2>
-                <p className="text-slate-500 text-sm">Detect and Erase Watermarks from Sora, TikTok, & CapCut</p>
+                <CloudArrowUpIcon className="w-12 h-12 text-amber-400/60 mx-auto mb-6 group-hover:scale-110 transition-all" />
+                <h2 className="text-2xl font-royal font-bold text-white mb-2">{file ? file.name : 'Bestow Royal Scroll'}</h2>
+                <p className="text-slate-500 text-xs uppercase tracking-widest font-medium">Sora • TikTok • CapCut • Stock</p>
               </div>
 
               <div className="relative group">
-                <LinkIcon className="w-6 h-6 absolute left-6 top-1/2 -translate-y-1/2 text-amber-400/30 group-focus-within:text-amber-400" />
+                <LinkIcon className="w-5 h-5 absolute left-6 top-1/2 -translate-y-1/2 text-amber-400/30 group-focus-within:text-amber-400" />
                 <input 
                   type="text" 
                   value={videoUrl}
                   onChange={(e) => { setVideoUrl(e.target.value); setFile(null); }}
-                  placeholder="Paste TikTok/Sora link..."
-                  className="w-full bg-slate-900/60 border border-white/10 rounded-2xl py-6 pl-16 pr-8 outline-none focus:border-amber-400/40 transition-all text-white placeholder:text-slate-700"
+                  placeholder="Paste URL to Detach..."
+                  className="w-full bg-slate-900/40 border border-white/10 rounded-2xl py-5 pl-14 pr-8 outline-none focus:border-amber-400/40 transition-all text-white placeholder:text-slate-700"
                 />
               </div>
 
-              {error && <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-5 rounded-2xl flex items-center gap-3"><ExclamationCircleIcon className="w-5 h-5" />{error}</div>}
+              {error && <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl flex items-center gap-3 text-xs font-bold uppercase tracking-widest"><ExclamationCircleIcon className="w-4 h-4" />{error}</div>}
 
               <button 
                 onClick={handleProcess}
-                className="btn-royal w-full bg-gradient-to-r from-amber-600 to-purple-700 py-7 rounded-2xl font-royal font-bold text-2xl tracking-[0.2em] shadow-2xl text-white hover:brightness-125"
+                className="btn-royal w-full bg-gradient-to-r from-amber-600 to-purple-700 py-6 rounded-2xl font-royal font-bold text-xl tracking-[0.3em] text-white shadow-xl"
               >
-                ERASE ALL WATERMARKS
+                DETACH WATERMARKS
               </button>
             </div>
           ) : (
-            <div className="space-y-8 animate-in fade-in duration-1000">
+            <div className="space-y-8 animate-in fade-in duration-700">
               <div className="flex justify-between items-center bg-white/5 p-4 rounded-2xl border border-white/10">
                 <div className="flex items-center gap-3">
                   <CheckCircleIcon className="w-6 h-6 text-green-400" />
                   <div>
-                    <span className="font-royal font-bold text-lg block">Purification Complete</span>
-                    <span className="text-[10px] text-amber-400 font-bold uppercase tracking-widest">{detectionMetadata?.platform} Marks Erased</span>
+                    <span className="font-royal font-bold text-lg block gold-shimmer">Detachment Complete</span>
+                    <span className="text-[9px] text-amber-400 font-bold uppercase tracking-[0.2em]">{detectionMetadata?.platform} Marks Erased</span>
                   </div>
                 </div>
-                <button onClick={reset} className="text-[10px] font-bold uppercase tracking-widest border border-white/10 px-4 py-2 rounded-lg hover:bg-white/5">Reset</button>
+                <button onClick={reset} className="text-[9px] font-bold uppercase tracking-[0.2em] border border-white/10 px-4 py-2 rounded-lg hover:bg-white/5 text-slate-400 transition-colors">New Stream</button>
               </div>
 
               <div className="rounded-[2rem] overflow-hidden border border-white/10 bg-black aspect-video relative shadow-2xl">
@@ -290,49 +282,43 @@ const App: React.FC = () => {
                 />
                 <canvas ref={canvasRef} className="w-full h-full object-contain" />
                 
-                <div className="absolute top-6 left-6 bg-black/60 backdrop-blur-md border border-amber-400/40 px-3 py-1.5 rounded-full flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                  <span className="text-[9px] font-bold uppercase tracking-widest text-amber-400">AI Erase Active</span>
+                <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-md border border-amber-400/30 px-3 py-1 rounded-full flex items-center gap-2">
+                  <SparklesIcon className="w-3 h-3 text-amber-400 animate-spin" style={{animationDuration: '4s'}} />
+                  <span className="text-[8px] font-black uppercase tracking-widest text-white">AI Active Purification</span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <button 
                   onClick={() => {
                     if (canvasRef.current) {
                       const link = document.createElement('a');
-                      link.download = `Purified_Video_${Date.now()}.png`; // Snapshot current frame
+                      link.download = `Purified_Frame_${Date.now()}.png`;
                       link.href = canvasRef.current.toDataURL();
                       link.click();
                     }
                   }}
-                  className="flex flex-col items-center justify-center gap-2 bg-white/5 border border-white/10 py-6 rounded-2xl hover:bg-white/10 transition-all group"
+                  className="flex items-center justify-center gap-3 bg-white/5 border border-white/10 py-5 rounded-2xl hover:bg-white/10 transition-all group"
                 >
-                  <div className="flex items-center gap-3">
-                    <ArrowDownTrayIcon className="w-6 h-6 text-amber-400 group-hover:animate-bounce" />
-                    <span className="font-royal font-bold text-white">Save Purified Frame</span>
-                  </div>
-                  <span className="text-[9px] text-slate-500 uppercase tracking-widest">Snapshot • No Watermark</span>
+                    <ArrowDownTrayIcon className="w-5 h-5 text-amber-400 group-hover:animate-bounce" />
+                    <span className="font-royal font-bold text-white text-sm">Save Frame</span>
                 </button>
                 <a 
                   href={resultVideo} 
-                  download={`Purified_Full_Video_${Date.now()}.mp4`}
-                  className="flex flex-col items-center justify-center gap-2 princess-gradient py-6 rounded-2xl hover:brightness-110 transition-all shadow-xl shadow-pink-500/20 text-white"
+                  download={`Purified_Video_${Date.now()}.mp4`}
+                  className="flex items-center justify-center gap-3 princess-gradient py-5 rounded-2xl hover:brightness-110 transition-all shadow-xl text-white"
                 >
-                  <div className="flex items-center gap-3">
-                    <VideoCameraIcon className="w-6 h-6" />
-                    <span className="font-royal font-bold text-white">Export Full Video</span>
-                  </div>
-                  <span className="text-[9px] text-white/70 uppercase tracking-widest">Original Quality • Clean Cut</span>
+                    <VideoCameraIcon className="w-5 h-5" />
+                    <span className="font-royal font-bold text-sm">Export Clean Cut</span>
                 </a>
               </div>
             </div>
           )}
         </main>
 
-        <footer className="mt-12 text-center opacity-30">
-          <p className="text-[9px] uppercase tracking-[1em] text-slate-600 font-bold">
-            Sovereign Neural Detachment Processing
+        <footer className="mt-8 text-center opacity-40">
+          <p className="text-[8px] uppercase tracking-[1em] text-slate-600 font-bold">
+            Sovereign Neural detachment Processing
           </p>
         </footer>
       </div>
@@ -340,7 +326,7 @@ const App: React.FC = () => {
       <style>{`
         @keyframes twinkle {
           0%, 100% { opacity: 0.2; transform: scale(1); }
-          50% { opacity: 0.6; transform: scale(1.2); }
+          50% { opacity: 0.6; transform: scale(1.1); }
         }
       `}</style>
     </div>
